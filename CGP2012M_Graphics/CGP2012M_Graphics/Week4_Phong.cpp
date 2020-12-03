@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
 	Model model;
 	//create model loader
 	ModelImport modelLoader; 
-	modelLoader.LoadOBJ2("..//..//Assets//Models//blenderSphere.obj", model.vertices, model.texCoords, model.normals, model.indices);
+	modelLoader.LoadOBJ2("..//..//Assets//Models//Soda_Can.obj", model.vertices, model.texCoords, model.normals, model.indices);	//Loads Can Model
 
 	errorLabel = 0;
 
@@ -162,15 +162,20 @@ int main(int argc, char *argv[]) {
 	//create textures - space for 4, but only using 2
 	Texture texArray[4];
 	//background texture
-	texArray[0].load("..//..//Assets//Textures//space.png");
+	texArray[0].load("..//..//Assets//Textures//sky.png");
 	texArray[0].setBuffers();
-	texArray[1].load("..//..//Assets//Textures//earthmap1k.png");
+	texArray[1].load("..//..//Assets//Textures//Soda_Texture_0.png");
 	texArray[1].setBuffers();
+	texArray[2].load("..//..//Assets//Textures//Soda_Texture_1.png");
+	texArray[2].setBuffers();
+	texArray[3].load("..//..//Assets//Textures//Perlin_Noise.jpg");
+	texArray[3].setBuffers();
 
 	errorLabel = 2;
 
 	//OpenGL buffers
 	background.setBuffers();
+	
 	model.setBuffers();
 
 	errorLabel = 3;
@@ -195,6 +200,7 @@ int main(int argc, char *argv[]) {
 
 
 	GLuint currentTime = 0;
+	GLuint deltaTime= 0;
 	GLuint lastTime = 0;
 	GLuint elapsedTime = 0;
 
@@ -252,7 +258,8 @@ int main(int argc, char *argv[]) {
 
 		//time
 		currentTime = SDL_GetTicks();
-		elapsedTime = currentTime - lastTime;
+		deltaTime = currentTime - lastTime;
+		elapsedTime += deltaTime;
 		lastTime = currentTime;
 
 		//update camera matrix
@@ -285,12 +292,19 @@ int main(int argc, char *argv[]) {
 		//screen resolution
 		//srLocation = glGetUniformLocation(background.shaderProgram, "uSr");
 		//glProgramUniform2fv(background.shaderProgram, srLocation,1, screen);
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texArray[0].texture);
 		background.render();
 
 
 		//set .obj model
 		glUseProgram(model.shaderProgram);
+
+		
+		timeLocation = glGetUniformLocation(model.shaderProgram, "uTime");
+		float elapsed = ((float)elapsedTime);
+		glProgramUniform1f(model.shaderProgram, timeLocation, (float)elapsed);
+
 		//set sphere lighting
 		modelColourLocation = glGetUniformLocation(model.shaderProgram, "uLightColour");
 		glProgramUniform3fv(model.shaderProgram, modelColourLocation, 1, glm::value_ptr(lightCol));
@@ -301,7 +315,7 @@ int main(int argc, char *argv[]) {
 		modelAmbientLocation = glGetUniformLocation(model.shaderProgram, "uAmbientIntensity");
 		glProgramUniform1f(model.shaderProgram, modelAmbientLocation, ambientIntensity);
 		//rotation
-		modelRotate = glm::rotate(modelRotate, (float)elapsedTime / 2000, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelRotate = glm::rotate(modelRotate, (float)deltaTime / 2000, glm::vec3(0.0f, 1.0f, 0.0f));
 		importModelLocation = glGetUniformLocation(model.shaderProgram, "uModel");
 		glUniformMatrix4fv(importModelLocation, 1, GL_FALSE, glm::value_ptr(modelTranslate*modelRotate*modelScale));
 		importViewLocation = glGetUniformLocation(model.shaderProgram, "uView");
@@ -318,8 +332,19 @@ int main(int argc, char *argv[]) {
 		viewPositionLocation = glGetUniformLocation(model.shaderProgram, "uViewPosition");
 		glProgramUniform3fv(model.shaderProgram, viewPositionLocation, 1, glm::value_ptr(cam.cameraPosition ));
 		
-
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texArray[1].texture);
+		glActiveTexture(GL_TEXTURE1);
+		GLint id = glGetUniformLocation(model.shaderProgram, "bTex");
+		glUniform1i(id, 1);
+		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+
+		glActiveTexture(GL_TEXTURE2);
+		GLint id2 = glGetUniformLocation(model.shaderProgram, "cTex");
+		glUniform1i(id2, 2);
+		glBindTexture(GL_TEXTURE_2D, texArray[3].texture);
+	
+		//renders sphere
 		model.render();
 
 		//set to wireframe so we can see the circles

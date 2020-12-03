@@ -9,7 +9,8 @@ in vec3 viewPosition;
 in float time;
 
 uniform sampler2D aTex;		//uniform holding texture info from main programme
-
+uniform sampler2D bTex;		//uniform for secondary texture
+uniform sampler2D cTex;	//uniform for noise nexture
 
 
 void main()
@@ -44,16 +45,46 @@ void main()
 	float sp = pow(max(dot(viewDirection, reflectDirection), 0.0), 8);
     vec3 specular = specularStrength * sp * lightColour; 
 
+	//turn primary texture into RGBA
+	vec4 primaryTextureColour = texture(aTex, textureCoordinate);
+	//turn secondary texture into RGBA
+	vec4 secondaryTextureColour = texture(bTex, textureCoordinate);
+	//turn noise texture into RGBA
+	vec4 noiseTextureColour = texture(cTex, textureCoordinate);
+
+
+	//Dissolve Shader - Daniel Monk
+	//**********************************
+
 	
-	vec4 textureColour = texture(aTex, textureCoordinate);
+	float timevalue = cos((time/1000.0)+1)+.5;
 	
-	//apply no lighting, ambient and diffuse components with colour contributed by texture
+	//Interpolate between two values 
+    vec4 fade = smoothstep(timevalue-.2, timevalue, noiseTextureColour);
+
+	//Create a vec4 of the color value used depending on fade state for either texture
+	vec4 col = (1.-fade) * primaryTextureColour + fade * secondaryTextureColour;
+
+	//Border which follows the fade to create fire dissolve effect
+	vec4 border = smoothstep(0., .1, fade) - smoothstep(.1, 1., fade);
+    //Color closest
+	vec4 leadcol = vec4(1., .5, .1,1);
+	//Color behind
+	vec4 trailcol = vec4(0.2, .4, 1.,1);
+	//mix both color values to create a eroding effect
+    vec4 fire = mix(leadcol, trailcol, smoothstep(0.8, 1., border))*2.;
+    
+	//Add the border and fire effect
+    col += border*fire;
+
+	//textureColour.b = cos(time/10) + 5 * .5f;
+ 	//apply no lighting, ambient and diffuse components with colour contributed by texture
 	//vertColour = (textureColour);
 	//vertColour = textureColour;
 	//vertColour = (vec4((lightColour), 1.0) * textureColour);
 	//vertColour = (vec4((ambient),1.0) * textureColour);
 	//vertColour = (vec4((ambient+diffuse),1.0) * textureColour);
-	vertColour = (vec4((ambient+diffuse+specular),1.0) * textureColour);
+	vertColour = (vec4((ambient+diffuse+specular),1.0) * col);
 	
 	
 }
